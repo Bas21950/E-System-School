@@ -17,6 +17,7 @@ export interface UpdateState {
 declare global {
   interface Window {
     electron?: {
+      getAppVersion?: () => Promise<string>;
       selectReceiptDirectory: () => Promise<string | null>;
       getUpdateState: () => Promise<UpdateState>;
       downloadUpdate: () => Promise<unknown>;

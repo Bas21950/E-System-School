@@ -239,6 +239,7 @@ export default function TopBar() {
   const isHomePage = pathname === '/dashboard';
   const breadcrumbs = buildBreadcrumbs(pathname);
   const [schoolName, setSchoolName] = useState('E-System School');
+  const [appVersion, setAppVersion] = useState<string | null>(null);
   const [schoolLogoUrl, setSchoolLogoUrl] = useState('');
   const [schoolLogoFailed, setSchoolLogoFailed] = useState(false);
   const [currentYear, setCurrentYear] = useState('-');
@@ -248,6 +249,14 @@ export default function TopBar() {
   useEffect(() => {
     setExpandedCategory(null);
   }, [pathname]);
+
+  useEffect(() => {
+    let active = true;
+    window.electron?.getAppVersion?.().then(version => {
+      if (active) setAppVersion(version);
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const loadHeaderData = async () => {
@@ -326,7 +335,10 @@ export default function TopBar() {
               <div className="mt-1 text-[2rem] font-medium leading-tight text-slate-900">
                 {schoolName}
               </div>
-              <div className="mt-2 text-lg text-slate-600">E-System School</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-lg text-slate-600">
+                E-System School
+                {appVersion && <span className="rounded border border-sky-200 bg-white px-2 py-0.5 text-xs font-semibold text-sky-800" aria-label={`เวอร์ชันโปรแกรม ${appVersion}`}>เวอร์ชัน {appVersion}</span>}
+              </div>
             </div>
           </div>
 

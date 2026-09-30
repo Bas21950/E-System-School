@@ -32,6 +32,8 @@ let mainWindow = null;
 let backendProcess = null;
 let frontendProcess = null;
 
+ipcMain.handle('app:get-version', () => app.getVersion());
+
 function getInstallConfigPaths() {
   const localAppData = process.env.LOCALAPPDATA || path.join(app.getPath('userData'), '..');
   const programData = process.env.ProgramData || process.env.PROGRAMDATA || 'C:\\ProgramData';

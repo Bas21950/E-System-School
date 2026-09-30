@@ -115,10 +115,11 @@ function setupAutoUpdater(window) {
     clearTimeout(installTimer);
     installTimer = setTimeout(() => {
       installingUpdate = true;
-      autoUpdater.quitAndInstall(true, true);
+      autoUpdater.quitAndInstall(false, true);
     }, 1200);
   });
   autoUpdater.on('error', (error) => {
+    installingUpdate = false;
     log.error('Auto-update failed', error);
     if (pendingUpdateInfo) {
       setUpdateWindowLock(true);
