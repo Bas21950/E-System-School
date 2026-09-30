@@ -1,6 +1,7 @@
 const { app, ipcMain } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
+const path = require('path');
 
 const UPDATE_CHANNELS = {
   idle: 'update:idle',
@@ -74,6 +75,7 @@ function setupAutoUpdater(window) {
   autoUpdater.logger = log;
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.installDirectory = path.dirname(app.getPath('exe'));
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'Bas21950',
@@ -113,8 +115,7 @@ function setupAutoUpdater(window) {
     clearTimeout(installTimer);
     installTimer = setTimeout(() => {
       installingUpdate = true;
-      setUpdateWindowLock(false);
-      autoUpdater.quitAndInstall(false, true);
+      autoUpdater.quitAndInstall(true, true);
     }, 1200);
   });
   autoUpdater.on('error', (error) => {

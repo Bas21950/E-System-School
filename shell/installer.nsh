@@ -4,12 +4,19 @@
 ; This runs before electron-builder invokes the previous version's uninstaller.
 ; The old uninstaller removes $INSTDIR recursively, so move school data out first.
 !ifndef BUILD_UNINSTALLER
+!include "${__FILEDIR__}\storage-directory.nsh"
 Var StorageConfigPath
 Var DataSettingsRepointed
 Var ReceiptSettingsRepointed
 Var ExistingInstallation
+Var ExistingInstallDirectory
 
 !macro customInit
+  ; Older app versions also launch with --updated but without /S.
+  ; Keep the transition to this version automatic for those callers too.
+  ${If} ${isUpdated}
+    SetSilent silent
+  ${EndIf}
   ; Treat a manually launched installer over an existing installation as an
   ; update too by checking the location saved by the install-mode initializer.
   StrCpy $ExistingInstallation "0"
@@ -23,6 +30,24 @@ Var ExistingInstallation
   ${If} $0 != ""
   ${OrIf} $1 != ""
     StrCpy $ExistingInstallation "1"
+    ${If} ${isUpdated}
+      ; initMultiUser already honors /D= from the running app.
+      StrCpy $ExistingInstallDirectory "$INSTDIR"
+    ${Else}
+      StrCpy $ExistingInstallDirectory "$0"
+      ${If} $ExistingInstallDirectory == ""
+        StrCpy $ExistingInstallDirectory "$1"
+      ${EndIf}
+    ${EndIf}
+    StrCpy $INSTDIR "$ExistingInstallDirectory"
+  ${ElseIf} ${isUpdated}
+    ; The updater passes the running executable's parent through /D=.
+    ${IfNot} ${FileExists} "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
+      MessageBox MB_ICONSTOP|MB_OK "ไม่พบตำแหน่งโปรแกรมเดิม ยกเลิกการอัปเดตโดยไม่เปลี่ยนแปลงข้อมูล"
+      Abort
+    ${EndIf}
+    StrCpy $ExistingInstallation "1"
+    StrCpy $ExistingInstallDirectory "$INSTDIR"
   ${EndIf}
   ${If} $ExistingInstallation == "1"
     StrCpy $DataSettingsRepointed "0"
@@ -49,6 +74,23 @@ Var ExistingInstallation
       ${If} $0 == "$INSTDIR\Receipts"
       ${OrIf} $0 == "$INSTDIR\..\E-System School Update Backup\Receipts"
         StrCpy $ReceiptSettingsRepointed "1"
+      ${EndIf}
+    ${EndIf}
+
+    ; Empty subdirectories are not school records. Preserve an empty backup
+    ; under a separate name rather than mistaking it for conflicting data.
+    ${If} ${FileExists} "$INSTDIR\..\E-System School Update Backup"
+      Push "$INSTDIR\..\E-System School Update Backup"
+      Call SchoolDirectoryContainsFiles
+      Pop $0
+      ${If} $0 == 0
+        System::Call 'kernel32::GetTickCount() i .r0'
+        ClearErrors
+        Rename "$INSTDIR\..\E-System School Update Backup" "$INSTDIR\..\E-System School Empty Backup-$0"
+        ${If} ${Errors}
+          MessageBox MB_ICONSTOP|MB_OK "เก็บโฟลเดอร์สำรองว่างไม่สำเร็จ ระบบหยุดโดยไม่ลบข้อมูล"
+          Abort
+        ${EndIf}
       ${EndIf}
     ${EndIf}
 
@@ -120,22 +162,8 @@ Var InstallDirectoryInput
 Var InstallDirectoryBrowseButton
 
 !macro customPageAfterChangeDir
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipInstallDirectoryPageIfInstalled
   Page custom InstallDirectoryPageCreate InstallDirectoryPageLeave
 !macroend
-
-Function SkipInstallDirectoryPageIfInstalled
-  ; Read both Windows registry hives explicitly. SHELL_CONTEXT may not yet
-  ; match an older per-user or per-machine installation at page-pre time.
-  ReadRegStr $DataDirectory HKCU "Software\${APP_GUID}" InstallLocation
-  ReadRegStr $1 HKLM "Software\${APP_GUID}" InstallLocation
-  ${If} $DataDirectory != ""
-  ${OrIf} $1 != ""
-    ; Keep the install directory already selected by electron-builder's
-    ; per-user/per-machine initialization; only skip the first-install page.
-    Abort
-  ${EndIf}
-FunctionEnd
 
 ; The selected system folder contains the application and all school files.
 ; Data and Receipts are subfolders, so their contents are kept separately from
@@ -152,6 +180,11 @@ Function NormaliseSystemDirectory
 FunctionEnd
 
 Function InstallDirectoryPageCreate
+  ; Page custom does not consume MUI_PAGE_CUSTOMFUNCTION_PRE. Skip it here.
+  ${If} $ExistingInstallation == "1"
+    StrCpy $INSTDIR "$ExistingInstallDirectory"
+    Abort
+  ${EndIf}
   StrCpy $DataDirectory "$LOCALAPPDATA\E-System School"
   !insertmacro MUI_HEADER_TEXT "ตำแหน่งระบบ" "เลือกโฟลเดอร์หลักสำหรับ E-System School"
   nsDialogs::Create 1018
@@ -193,7 +226,7 @@ Function InstallDirectoryPageLeave
 FunctionEnd
 
 !macro customInstall
-  ${IfNot} ${isUpdated}
+  ${If} $ExistingInstallation != "1"
     CreateDirectory "$INSTDIR"
     CreateDirectory "$INSTDIR\Data"
     CreateDirectory "$INSTDIR\Receipts"
