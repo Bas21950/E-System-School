@@ -7,9 +7,18 @@
 Var StorageConfigPath
 Var DataSettingsRepointed
 Var ReceiptSettingsRepointed
+Var ExistingInstallation
 
 !macro customInit
-  ${If} ${isUpdated}
+  ; Treat a manually launched installer over an existing installation as an
+  ; update too by checking the location saved by the install-mode initializer.
+  StrCpy $ExistingInstallation "0"
+  ReadRegStr $0 SHELL_CONTEXT "Software\${APP_GUID}" InstallLocation
+  ${If} $0 != ""
+    StrCpy $INSTDIR $0
+    StrCpy $ExistingInstallation "1"
+  ${EndIf}
+  ${If} $ExistingInstallation == "1"
     StrCpy $DataSettingsRepointed "0"
     StrCpy $ReceiptSettingsRepointed "0"
     ${If} ${FileExists} "$LOCALAPPDATA\E-System School\install-settings.ini"
@@ -105,9 +114,19 @@ Var InstallDirectoryInput
 Var InstallDirectoryBrowseButton
 
 !macro customPageAfterChangeDir
-  !insertmacro skipPageIfUpdated
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipInstallDirectoryPageIfInstalled
   Page custom InstallDirectoryPageCreate InstallDirectoryPageLeave
 !macroend
+
+Function SkipInstallDirectoryPageIfInstalled
+  ; initMultiUser has already selected the previous installation scope. Keep
+  ; its registered path and don't ask users to select a new folder on upgrades.
+  ReadRegStr $DataDirectory SHELL_CONTEXT "Software\${APP_GUID}" InstallLocation
+  ${If} $DataDirectory != ""
+    StrCpy $INSTDIR $DataDirectory
+    Abort
+  ${EndIf}
+FunctionEnd
 
 ; The selected system folder contains the application and all school files.
 ; Data and Receipts are subfolders, so their contents are kept separately from
