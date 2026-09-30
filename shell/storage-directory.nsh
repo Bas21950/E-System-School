@@ -43,6 +43,7 @@ Function SchoolDirectoryContainsFiles
         ${Break}
       ${EndIf}
     ${EndIf}
+    ClearErrors
     FindNext $R1 $R2
     ${If} ${Errors}
       StrCpy $R2 ""
