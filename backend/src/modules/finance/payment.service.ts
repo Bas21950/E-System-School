@@ -3,7 +3,7 @@ import path from 'path';
 import { PoolClient } from 'pg';
 import { getPostgresPool } from '../../config/database';
 import { getReceiptSettingsRecord, saveReceiptSettingsRecord } from '../../repositories/receiptSettings.repository';
-import { buildLocalFileUrl, getBrandingDir, getTransferSlipDir } from '../../config/storage';
+import { buildLocalFileUrl, getBrandingDir, getTransferSlipDir, resolveSchoolLogoUrl } from '../../config/storage';
 import { buildStudentFeeDiscountMap } from './discount.service';
 import { Payment, ProcessPaymentInput, ReceiptSettings } from './finance.types';
 
@@ -595,7 +595,8 @@ export async function getPaymentStatsByYear() {
 }
 
 export async function getReceiptSettings() {
-  return getReceiptSettingsRecord();
+  const settings = await getReceiptSettingsRecord();
+  return { ...settings, school_logo_url: resolveSchoolLogoUrl(settings.school_logo_url) };
 }
 
 export async function updateReceiptSettings(input: ReceiptSettings) {

@@ -12,7 +12,7 @@ import roomRoutes from './modules/rooms/rooms.routes';
 import financeRoutes from './modules/finance/finance.routes';
 import enrollmentRoutes from './modules/students/enrollment.routes';
 import { checkDatabaseConnection, ensureReceiptSettingsSchema, ensureStudentProfileSchema } from './config/database';
-import { ensureStorageDirectories, getDataDir } from './config/storage';
+import { ensureStorageDirectories, getDataDir, getBundledSchoolLogoPath } from './config/storage';
 
 dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || undefined });
 ensureStorageDirectories();
@@ -29,6 +29,10 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/files', express.static(getDataDir()));
+// Uploaded branding takes precedence; the packaged seal survives a fresh install.
+app.get('/api/files/branding/school-logo.png', (_req, res) => {
+  res.sendFile(getBundledSchoolLogoPath());
+});
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -240,6 +240,7 @@ export default function TopBar() {
   const breadcrumbs = buildBreadcrumbs(pathname);
   const [schoolName, setSchoolName] = useState('E-System School');
   const [schoolLogoUrl, setSchoolLogoUrl] = useState('');
+  const [schoolLogoFailed, setSchoolLogoFailed] = useState(false);
   const [currentYear, setCurrentYear] = useState('-');
   const [currentSemester, setCurrentSemester] = useState('-');
   const [expandedCategory, setExpandedCategory] = useState<CategoryKey | null>(null);
@@ -269,6 +270,7 @@ export default function TopBar() {
 
         setSchoolName(receiptRes.data?.school_name || 'E-System School');
         setSchoolLogoUrl(receiptRes.data?.school_logo_url || '');
+        setSchoolLogoFailed(false);
         setCurrentYear(currentAcademicYear?.year || '-');
         setCurrentSemester(semesterInCurrentYear?.semester || '-');
       } catch (error) {
@@ -305,9 +307,14 @@ export default function TopBar() {
         <div className="mx-auto flex max-w-[1440px] items-start justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-sky-100 bg-white shadow-sm">
-              {schoolLogoUrl ? (
+              {schoolLogoUrl && !schoolLogoFailed ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={schoolLogoUrl} alt="school logo" className="h-16 w-16 object-contain" />
+                <img
+                  src={schoolLogoUrl}
+                  alt="ตราโรงเรียน"
+                  className="h-16 w-16 object-contain"
+                  onError={() => setSchoolLogoFailed(true)}
+                />
               ) : (
                 <HiOutlineBuildingOffice2 size={38} className="text-sky-700" />
               )}

@@ -18,6 +18,30 @@ export function getBrandingDir() {
   return brandingDir;
 }
 
+export function getBundledSchoolLogoPath() {
+  return path.resolve(__dirname, '../../assets/branding/school-logo.png');
+}
+
+export function resolveSchoolLogoUrl(input?: string | null): string {
+  const value = input?.trim();
+  const fallback = buildLocalFileUrl('branding/school-logo.png');
+  if (!value) return fallback;
+
+  try {
+    const url = new URL(value);
+    if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) &&
+        url.pathname.startsWith('/api/files/branding/')) {
+      const fileName = decodeURIComponent(url.pathname.slice('/api/files/branding/'.length));
+      if (fileName !== path.basename(fileName) || !fs.existsSync(path.join(brandingDir, fileName))) {
+        return fallback;
+      }
+    }
+  } catch (_) {
+    // Keep custom data URLs and paths supplied by the administrator.
+  }
+  return value;
+}
+
 export function getReceiptDir() {
   return receiptDir;
 }

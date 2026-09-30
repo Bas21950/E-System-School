@@ -5,6 +5,7 @@ import { chromium } from 'playwright';
 import { getPaymentForReceipt } from './payment.service';
 import { bahtText } from '../../utils/currency';
 import { getReceiptSettingsRecord } from '../../repositories/receiptSettings.repository';
+import { getBrandingDir, getBundledSchoolLogoPath } from '../../config/storage';
 
 const TEMPLATE_PATH = path.join(process.cwd(), 'src', 'templates', 'receipt_template.html');
 const FONT_REGULAR_PATH = path.join(process.cwd(), 'php-receipt', 'THSarabunNew.ttf');
@@ -45,7 +46,19 @@ function toDataUrl(input?: string | null): string {
   const value = input.trim();
   if (!value) return '';
   if (value.startsWith('data:')) return value;
-  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    const url = new URL(value);
+    if (['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) &&
+        url.pathname.startsWith('/api/files/branding/')) {
+      const fileName = decodeURIComponent(url.pathname.slice('/api/files/branding/'.length));
+      const uploadedPath = path.join(getBrandingDir(), fileName);
+      if (fileName === path.basename(fileName) && fs.existsSync(uploadedPath)) {
+        return toDataUrl(uploadedPath);
+      }
+      return toDataUrl(getBundledSchoolLogoPath());
+    }
+    return value;
+  }
 
   if (fs.existsSync(value)) {
     const ext = path.extname(value).toLowerCase();
@@ -64,6 +77,8 @@ function toDataUrl(input?: string | null): string {
 }
 
 function buildDefaultLogoDataUrl(schoolName: string): string {
+  const bundledLogo = toDataUrl(getBundledSchoolLogoPath());
+  if (bundledLogo) return bundledLogo;
   const svg = `
   <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
     <rect width="160" height="160" rx="20" fill="#f5f7fb"/>

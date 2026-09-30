@@ -36,6 +36,7 @@ export default function ReceiptSettingsPage() {
   const [payeeName, setPayeeName] = useState('ฝ่ายการเงิน');
   const [schoolName, setSchoolName] = useState('โรงเรียนสหวิทยานุสรณ์');
   const [schoolLogoUrl, setSchoolLogoUrl] = useState('');
+  const [schoolLogoFailed, setSchoolLogoFailed] = useState(false);
   const [schoolAddress, setSchoolAddress] = useState('เลขที่ 2 ถนนราชธานี ตำบลในเมือง อำเภอเมือง จังหวัดอุบลราชธานี 34000');
   const [schoolPhone, setSchoolPhone] = useState('045-352-099');
   const [schoolSubtitle, setSchoolSubtitle] = useState('ใบเสร็จรับเงิน - ฝ่ายการเงิน');
@@ -63,6 +64,7 @@ export default function ReceiptSettingsPage() {
         setPayeeName(nextPayeeName);
         setSchoolName(settings.school_name || 'โรงเรียนสหวิทยานุสรณ์');
         setSchoolLogoUrl(settings.school_logo_url || '');
+        setSchoolLogoFailed(false);
         setSchoolAddress(settings.school_address || 'เลขที่ 2 ถนนราชธานี ตำบลในเมือง อำเภอเมือง จังหวัดอุบลราชธานี 34000');
         setSchoolPhone(settings.school_phone || '045-352-099');
         setSchoolSubtitle(settings.school_subtitle || 'ใบเสร็จรับเงิน - ฝ่ายการเงิน');
@@ -94,6 +96,7 @@ export default function ReceiptSettingsPage() {
       );
       const uploadedUrl = res?.data?.url || '';
       if (uploadedUrl) {
+        setSchoolLogoFailed(false);
         setSchoolLogoUrl(uploadedUrl);
       } else {
         await fetchSettings();
@@ -199,11 +202,12 @@ export default function ReceiptSettingsPage() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        {logoPreview ? (
+                        {logoPreview && !schoolLogoFailed ? (
                           <img
                             src={logoPreview}
-                            alt="school logo"
+                            alt="ตราโรงเรียน"
                             className="w-16 h-16 rounded-xl object-contain border border-gray-200 bg-white"
+                            onError={() => setSchoolLogoFailed(true)}
                           />
                         ) : (
                           <div className="w-16 h-16 rounded-xl border border-dashed border-gray-200 flex items-center justify-center text-gray-300">
@@ -211,7 +215,11 @@ export default function ReceiptSettingsPage() {
                           </div>
                         )}
                         <div className="text-sm text-gray-500">
-                          {logoPreview ? 'อัปโหลดโลโก้เรียบร้อย' : 'ยังไม่ได้อัปโหลดโลโก้'}
+                          {schoolLogoFailed
+                            ? 'ไม่พบไฟล์โลโก้ กรุณาเลือกไฟล์ตราโรงเรียนเพื่ออัปโหลดใหม่'
+                            : logoPreview
+                              ? 'อัปโหลดโลโก้เรียบร้อย'
+                              : 'ยังไม่ได้อัปโหลดโลโก้'}
                         </div>
                       </div>
                     </div>

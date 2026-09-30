@@ -11,6 +11,8 @@ files:
   - package.json
 asar: true
 compression: maximum
+releaseInfo:
+  releaseNotesFile: release-notes.md
 extraResources:
   - from: runtime-dependencies/backend/node_modules
     to: app/backend/node_modules
