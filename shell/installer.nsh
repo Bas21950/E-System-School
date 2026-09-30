@@ -168,45 +168,42 @@ Var InstallDirectoryBrowseButton
 
 !macro customPageAfterChangeDir
   Page custom InstallDirectoryPageCreate InstallDirectoryPageLeave
+  Function SchoolInstallProgressShow
+    ${If} $ExistingInstallation == "1"
+      !insertmacro MUI_HEADER_TEXT "กำลังติดตั้งอัปเดต ${VERSION}" "กำลังติดตั้งไฟล์ใหม่และคืนข้อมูลเดิม กรุณารอ โปรแกรมจะเปิดใหม่โดยอัตโนมัติ"
+      GetDlgItem $0 $HWNDPARENT 2
+      EnableWindow $0 0
+      System::Call 'user32::GetSystemMenu(p $HWNDPARENT, i 0) p .r0'
+      System::Call 'user32::EnableMenuItem(p r0, i 0xF060, i 1)'
+      BringToFront
+    ${EndIf}
+  FunctionEnd
   !define MUI_PAGE_CUSTOMFUNCTION_SHOW SchoolInstallProgressShow
 !macroend
 
-Function SchoolInstallProgressShow
-  ${If} ${isUpdated}
-    !insertmacro MUI_HEADER_TEXT "กำลังติดตั้งอัปเดต ${VERSION}" "กำลังติดตั้งไฟล์ใหม่และคืนข้อมูลเดิม กรุณารอ โปรแกรมจะเปิดใหม่โดยอัตโนมัติ"
-    GetDlgItem $0 $HWNDPARENT 2
-    EnableWindow $0 0
-    System::Call 'user32::GetSystemMenu(p $HWNDPARENT, i 0) p .r0'
-    System::Call 'user32::EnableMenuItem(p r0, i 0xF060, i 1)'
-    BringToFront
-  ${EndIf}
-FunctionEnd
-
 !macro customFinishPage
+  Function StartApp
+    ${If} $ExistingInstallation == "1"
+      StrCpy $1 "--updated"
+    ${Else}
+      StrCpy $1 ""
+    ${EndIf}
+    ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" "$1"
+  FunctionEnd
+
+  Function SchoolFinishPagePre
+    ${If} $ExistingInstallation == "1"
+      !insertmacro MUI_HEADER_TEXT "อัปเดต ${VERSION} สำเร็จ" "ข้อมูลเดิมพร้อมใช้งาน กำลังเปิด E-System School ใหม่"
+      Sleep 1200
+      Call StartApp
+      Quit
+    ${EndIf}
+  FunctionEnd
   !define MUI_PAGE_CUSTOMFUNCTION_PRE SchoolFinishPagePre
   !define MUI_FINISHPAGE_RUN
   !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
   !insertmacro MUI_PAGE_FINISH
 !macroend
-
-; Preserve the normal first-install Finish page; updates skip it entirely.
-Function StartApp
-  ${If} ${isUpdated}
-    StrCpy $1 "--updated"
-  ${Else}
-    StrCpy $1 ""
-  ${EndIf}
-  ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" "$1"
-FunctionEnd
-
-Function SchoolFinishPagePre
-  ${If} ${isUpdated}
-    !insertmacro MUI_HEADER_TEXT "อัปเดต ${VERSION} สำเร็จ" "ข้อมูลเดิมพร้อมใช้งาน กำลังเปิด E-System School ใหม่"
-    Sleep 1200
-    Call StartApp
-    Quit
-  ${EndIf}
-FunctionEnd
 
 ; The selected system folder contains the application and all school files.
 ; Data and Receipts are subfolders, so their contents are kept separately from
