@@ -3,7 +3,7 @@
 
 [Setup]
 AppName=E-System School
-AppVersion=1.2.5
+AppVersion=1.2.6
 DefaultDirName={autopf}\E-System School
 DefaultGroupName=E-System School
 AllowNoIcons=yes

@@ -13,9 +13,15 @@ Var ExistingInstallation
   ; Treat a manually launched installer over an existing installation as an
   ; update too by checking the location saved by the install-mode initializer.
   StrCpy $ExistingInstallation "0"
-  ReadRegStr $0 SHELL_CONTEXT "Software\${APP_GUID}" InstallLocation
+  ReadRegStr $0 HKCU "Software\${APP_GUID}" InstallLocation
+  ReadRegStr $1 HKLM "Software\${APP_GUID}" InstallLocation
   ${If} $0 != ""
-    StrCpy $INSTDIR $0
+  ${AndIf} $1 != ""
+    MessageBox MB_ICONSTOP|MB_OK "พบการติดตั้งทั้งแบบผู้ใช้ปัจจุบันและทุกผู้ใช้ กรุณาติดต่อผู้ดูแลก่อนอัปเดต ระบบหยุดโดยไม่เปลี่ยนแปลงข้อมูล"
+    Abort
+  ${EndIf}
+  ${If} $0 != ""
+  ${OrIf} $1 != ""
     StrCpy $ExistingInstallation "1"
   ${EndIf}
   ${If} $ExistingInstallation == "1"
@@ -119,11 +125,14 @@ Var InstallDirectoryBrowseButton
 !macroend
 
 Function SkipInstallDirectoryPageIfInstalled
-  ; initMultiUser has already selected the previous installation scope. Keep
-  ; its registered path and don't ask users to select a new folder on upgrades.
-  ReadRegStr $DataDirectory SHELL_CONTEXT "Software\${APP_GUID}" InstallLocation
+  ; Read both Windows registry hives explicitly. SHELL_CONTEXT may not yet
+  ; match an older per-user or per-machine installation at page-pre time.
+  ReadRegStr $DataDirectory HKCU "Software\${APP_GUID}" InstallLocation
+  ReadRegStr $1 HKLM "Software\${APP_GUID}" InstallLocation
   ${If} $DataDirectory != ""
-    StrCpy $INSTDIR $DataDirectory
+  ${OrIf} $1 != ""
+    ; Keep the install directory already selected by electron-builder's
+    ; per-user/per-machine initialization; only skip the first-install page.
     Abort
   ${EndIf}
 FunctionEnd
