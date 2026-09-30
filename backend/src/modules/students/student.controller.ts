@@ -3,6 +3,24 @@ import * as XLSX from 'xlsx';
 import { sendSuccess, sendError } from '../../utils/response';
 import * as studentService from './student.service';
 import { StudentFilters } from './student.types';
+import { renderStudentDocument, studentDocumentPdf } from './student-document.service';
+import { getReceiptSettingsRecord } from '../../repositories/receiptSettings.repository';
+
+export async function studentDocument(req: Request, res: Response) {
+  try {
+    const [student, settings] = await Promise.all([studentService.getStudentById(req.params.id), getReceiptSettingsRecord()]);
+    const html = renderStudentDocument(student, settings);
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.path.endsWith('.pdf')) {
+      const pdf = await studentDocumentPdf(html);
+      res.setHeader('Content-Disposition', `attachment; filename="student-${student.id}.pdf"`);
+      res.type('application/pdf').send(pdf);
+    } else res.type('html').send(html);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unable to generate student document';
+    res.status(message === 'Student not found' ? 404 : 500).json(sendError(message));
+  }
+}
 
 // ─── GET /api/students ───
 export async function listStudents(req: Request, res: Response) {

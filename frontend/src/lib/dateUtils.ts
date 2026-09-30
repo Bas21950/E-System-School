@@ -31,7 +31,10 @@ export function formatThaiDate(
   let dayVal, monthIdx, yearVal;
   
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
-    const [y, m, d] = date.split('-').map(Number);
+    const [, yText, mText, dText] = date.match(/^(\d{4})-(\d{2})-(\d{2})/)!;
+    const [y, m, d] = [yText, mText, dText].map(Number);
+    const check = new Date(Date.UTC(y, m - 1, d));
+    if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) return '-';
     yearVal = y;
     monthIdx = m - 1;
     dayVal = d;

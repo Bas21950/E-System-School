@@ -16,6 +16,8 @@ router.post('/import', upload.single('file'), controller.importStudents);
 
 // CRUD
 router.get('/', controller.listStudents);
+router.get('/:id/document', controller.studentDocument);
+router.get('/:id/document.pdf', controller.studentDocument);
 router.get('/:id', controller.getStudent);
 router.post('/', validateStudentBody, controller.createStudent);
 router.put('/:id', controller.updateStudent);
