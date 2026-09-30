@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE students
+  ADD COLUMN IF NOT EXISTS profile_data JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+COMMIT;

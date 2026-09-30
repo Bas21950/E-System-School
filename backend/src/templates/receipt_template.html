@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Receipt - {{school_name}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; font-size: 15pt; color: #111; background: #fff; }
+  @media print { @page { size: A4 landscape; margin: 0; } }
+
+  .page {
+    width: 297mm;
+    height: 210mm;
+    display: flex;
+    gap: 4mm;
+    padding: 5mm;
+    overflow: hidden;
+  }
+
+  .receipt {
+    flex: 1;
+    border: 1px solid #333;
+    padding: 4mm 4mm 3mm;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .header {
+    display: grid;
+    grid-template-columns: 19mm 1fr;
+    column-gap: 4mm;
+    align-items: start;
+  }
+
+  .logo {
+    width: 18mm;
+    height: 18mm;
+    object-fit: contain;
+    margin-top: 1mm;
+  }
+
+  .school-info {
+    text-align: center;
+    padding-right: 10mm;
+  }
+
+  .school-name {
+    font-size: 24pt;
+    line-height: 1.05;
+    font-weight: 700;
+  }
+
+  .school-address,
+  .school-phone {
+    font-size: 15pt;
+    line-height: 1.15;
+    margin-top: 0.6mm;
+  }
+
+  .title-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    column-gap: 4mm;
+    margin-top: 2.4mm;
+    margin-bottom: 1.6mm;
+    padding-left: 19mm;
+  }
+
+  .receipt-title {
+    text-align: center;
+    font-size: 18pt;
+    font-weight: 700;
+  }
+
+  .receipt-subtitle {
+    font-size: 14pt;
+    white-space: nowrap;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 7mm;
+    row-gap: 0.5mm;
+    margin-bottom: 1.8mm;
+  }
+
+  .info-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6mm;
+  }
+
+  .info-item {
+    display: flex;
+    align-items: baseline;
+    gap: 2mm;
+    white-space: nowrap;
+    font-size: 15pt;
+    line-height: 1.1;
+  }
+
+  .info-label { font-weight: 400; }
+  .info-value { font-weight: 600; }
+
+  .table-wrap {
+    position: relative;
+    flex: 0 0 110mm;
+    height: 110mm;
+    min-height: 110mm;
+  }
+
+  .watermark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .watermark-text {
+    font-size: 58pt;
+    font-weight: 700;
+    color: rgba(130, 130, 130, 0.13);
+    transform: rotate(-35deg);
+    white-space: nowrap;
+    letter-spacing: 0.5pt;
+  }
+
+  .items-table {
+    width: 100%;
+    height: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    position: relative;
+    z-index: 2;
+  }
+
+  .items-table th,
+  .items-table td {
+    border: 1px solid #333;
+    padding: 1.4mm 2mm;
+    vertical-align: top;
+    background: transparent;
+  }
+
+  .items-table tbody td {
+    border-top: 0;
+    border-bottom: 0;
+  }
+
+  .items-table th {
+    text-align: center;
+    font-size: 15pt;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .col-no { width: 14%; }
+  .col-item { width: 66%; }
+  .col-amt { width: 20%; }
+
+  .no-cell {
+    text-align: center;
+    font-size: 15pt;
+  }
+
+  .item-cell,
+  .amt-cell {
+    font-size: 15pt;
+    line-height: 1.12;
+  }
+
+  .amt-cell {
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .placeholder-row td {
+    height: 8.6mm;
+  }
+
+  .total-row td {
+    vertical-align: middle;
+    font-size: 15pt;
+  }
+
+  .total-label {
+    text-align: center;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .total-baht {
+    font-weight: 400;
+  }
+
+  .footer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 5mm;
+    margin-top: 2.2mm;
+  }
+
+  .conditions {
+    font-size: 13pt;
+    line-height: 1.2;
+  }
+
+  .conditions-line {
+    display: grid;
+    grid-template-columns: 16mm 1fr;
+    align-items: flex-start;
+    column-gap: 1.8mm;
+    margin-bottom: 0.35mm;
+  }
+
+  .conditions-label {
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  .conditions-text {
+    white-space: nowrap;
+  }
+
+  .signature-block {
+    min-width: 40%;
+    text-align: center;
+    font-size: 15pt;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .sig-name {
+    margin-top: 1.2mm;
+    font-size: 15pt;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="receipt">
+    <div class="header">
+      <img class="logo" src="{{school_logo_url}}" alt="logo" />
+      <div class="school-info">
+        <div class="school-name">{{school_name}}</div>
+        <div class="school-address">{{school_address}}</div>
+        <div class="school-phone">{{phone_label}} {{school_phone}}</div>
+      </div>
+    </div>
+
+    <div class="title-row">
+      <div class="receipt-title">{{label_receipt_title}}</div>
+      <div class="receipt-subtitle">{{label_finance_copy}}</div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-col">
+        <div class="info-item"><span class="info-label">{{label_date}}</span><span class="info-value">{{payment_date}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_student_name}}</span><span class="info-value">{{student_name}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_class}}</span><span class="info-value">{{class}}</span></div>
+      </div>
+      <div class="info-col">
+        <div class="info-item"><span class="info-label">{{label_receipt_no}}</span><span class="info-value">{{receipt_no}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_student_id}}</span><span class="info-value">{{student_id}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_term}}</span><span class="info-value">{{term}}</span></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="watermark"><span class="watermark-text">{{watermark_original}}</span></div>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th class="col-no">{{label_no}}</th>
+            <th class="col-item">{{label_item}}</th>
+            <th class="col-amt">{{label_amount}}<br>({{label_baht}})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="no-cell">{{item_no_1}}</td><td class="item-cell">{{item_description_1}}</td><td class="amt-cell">{{item_amount_1}}</td></tr>
+          <tr><td class="no-cell">{{item_no_2}}</td><td class="item-cell">{{item_description_2}}</td><td class="amt-cell">{{item_amount_2}}</td></tr>
+          <tr><td class="no-cell">{{item_no_3}}</td><td class="item-cell">{{item_description_3}}</td><td class="amt-cell">{{item_amount_3}}</td></tr>
+          <tr><td class="no-cell">{{item_no_4}}</td><td class="item-cell">{{item_description_4}}</td><td class="amt-cell">{{item_amount_4}}</td></tr>
+          <tr><td class="no-cell">{{item_no_5}}</td><td class="item-cell">{{item_description_5}}</td><td class="amt-cell">{{item_amount_5}}</td></tr>
+          <tr><td class="no-cell">{{item_no_6}}</td><td class="item-cell">{{item_description_6}}</td><td class="amt-cell">{{item_amount_6}}</td></tr>
+          <tr><td class="no-cell">{{item_no_7}}</td><td class="item-cell">{{item_description_7}}</td><td class="amt-cell">{{item_amount_7}}</td></tr>
+          <tr><td class="no-cell">{{item_no_8}}</td><td class="item-cell">{{item_description_8}}</td><td class="amt-cell">{{item_amount_8}}</td></tr>
+          <tr><td class="no-cell">{{item_no_9}}</td><td class="item-cell">{{item_description_9}}</td><td class="amt-cell">{{item_amount_9}}</td></tr>
+          <tr><td class="no-cell">{{item_no_10}}</td><td class="item-cell">{{item_description_10}}</td><td class="amt-cell">{{item_amount_10}}</td></tr>
+          <tr class="placeholder-row"><td></td><td></td><td></td></tr>
+          <tr class="placeholder-row"><td></td><td></td><td></td></tr>
+          <tr class="placeholder-row"><td></td><td></td><td></td></tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td class="total-label">{{label_total}}</td>
+            <td class="total-label">{{total_text}}</td>
+            <td class="amt-cell">{{total_amount}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="footer">
+      <div class="conditions">
+        <span class="conditions-line"><span class="conditions-label">เงื่อนไข</span><span class="conditions-text">- กรุณาเก็บใบเสร็จไว้เป็นหลักฐาน</span></span>
+        <span class="conditions-line"><span class="conditions-label"></span><span class="conditions-text">- ถ้าต้องการเปลี่ยนแปลงหรือแก้ไขข้อมูล</span></span>
+        <span class="conditions-line"><span class="conditions-label"></span><span class="conditions-text">- ต้องนำต้นฉบับและสำเนามาด้วยทุกครั้ง</span></span>
+      </div>
+      <div class="signature-block">
+        <div>{{label_signature_line}}</div>
+        <div class="sig-name">({{cashier_name}})</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="receipt">
+    <div class="header">
+      <img class="logo" src="{{school_logo_url}}" alt="logo" />
+      <div class="school-info">
+        <div class="school-name">{{school_name}}</div>
+        <div class="school-address">{{school_address}}</div>
+        <div class="school-phone">{{phone_label}} {{school_phone}}</div>
+      </div>
+    </div>
+
+    <div class="title-row">
+      <div class="receipt-title">{{label_receipt_title}}</div>
+      <div class="receipt-subtitle">{{label_student_copy}}</div>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-col">
+        <div class="info-item"><span class="info-label">{{label_date}}</span><span class="info-value">{{payment_date}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_student_name}}</span><span class="info-value">{{student_name}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_class}}</span><span class="info-value">{{class}}</span></div>
+      </div>
+      <div class="info-col">
+        <div class="info-item"><span class="info-label">{{label_receipt_no}}</span><span class="info-value">{{receipt_no}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_student_id}}</span><span class="info-value">{{student_id}}</span></div>
+        <div class="info-item"><span class="info-label">{{label_term}}</span><span class="info-value">{{term}}</span></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="watermark"><span class="watermark-text">{{watermark_copy}}</span></div>
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th class="col-no">{{label_no}}</th>
+            <th class="col-item">{{label_item}}</th>
+            <th class="col-amt">{{label_amount}}<br>({{label_baht}})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="no-cell">{{item_no_1}}</td><td class="item-cell">{{item_description_1}}</td><td class="amt-cell">{{item_amount_1}}</td></tr>
+          <tr><td class="no-cell">{{item_no_2}}</td><td class="item-cell">{{item_description_2}}</td><td class="amt-cell">{{item_amount_2}}</td></tr>
+          <tr><td class="no-cell">{{item_no_3}}</td><td class="item-cell">{{item_description_3}}</td><td class="amt-cell">{{item_amount_3}}</td></tr>
+          <tr><td class="no-cell">{{item_no_4}}</td><td class="item-cell">{{item_description_4}}</td><td class="amt-cell">{{item_amount_4}}</td></tr>
+          <tr><td class="no-cell">{{item_no_5}}</td><td class="item-cell">{{item_description_5}}</td><td class="amt-cell">{{item_amount_5}}</td></tr>
+          <tr><td class="no-cell">{{item_no_6}}</td><td class="item-cell">{{item_description_6}}</td><td class="amt-cell">{{item_amount_6}}</td></tr>
+          <tr><td class="no-cell">{{item_no_7}}</td><td class="item-cell">{{item_description_7}}</td><td class="amt-cell">{{item_amount_7}}</td></tr>
+          <tr><td class="no-cell">{{item_no_8}}</td><td class="item-cell">{{item_description_8}}</td><td class="amt-cell">{{item_amount_8}}</td></tr>
+          <tr><td class="no-cell">{{item_no_9}}</td><td class="item-cell">{{item_description_9}}</td><td class="amt-cell">{{item_amount_9}}</td></tr>
+          <tr><td class="no-cell">{{item_no_10}}</td><td class="item-cell">{{item_description_10}}</td><td class="amt-cell">{{item_amount_10}}</td></tr>
+          <tr class="placeholder-row"><td></td><td></td><td></td></tr>
+          <tr class="placeholder-row"><td></td><td></td><td></td></tr>
+          <tr class="placeholder-row"><td></td><td></td><td></td></tr>
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td class="total-label">{{label_total}}</td>
+            <td class="total-label">{{total_text}}</td>
+            <td class="amt-cell">{{total_amount}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="footer">
+      <div class="conditions">
+        <span class="conditions-line"><span class="conditions-label">เงื่อนไข</span><span class="conditions-text">- กรุณาเก็บใบเสร็จไว้เป็นหลักฐาน</span></span>
+        <span class="conditions-line"><span class="conditions-label"></span><span class="conditions-text">- ถ้าต้องการเปลี่ยนแปลงหรือแก้ไขข้อมูล</span></span>
+        <span class="conditions-line"><span class="conditions-label"></span><span class="conditions-text">- ต้องนำต้นฉบับและสำเนามาด้วยทุกครั้ง</span></span>
+      </div>
+      <div class="signature-block">
+        <div>{{label_signature_line}}</div>
+        <div class="sig-name">({{cashier_name}})</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

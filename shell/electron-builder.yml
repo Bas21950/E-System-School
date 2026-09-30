@@ -1,0 +1,60 @@
+appId: th.sahawittayanusorn.esystemschool
+productName: E-System School
+artifactName: E-System-School-Setup-${version}.${ext}
+directories:
+  output: ../release
+  buildResources: .
+files:
+  - main.js
+  - preload.js
+  - updater.js
+  - package.json
+asar: true
+compression: maximum
+extraResources:
+  - from: runtime-dependencies/backend/node_modules
+    to: app/backend/node_modules
+    filter:
+      - "**/*"
+      - "!**/.cache/**"
+  - from: runtime-dependencies/frontend/node_modules
+    to: app/frontend/node_modules
+    filter:
+      - "**/*"
+      - "!**/.cache/**"
+  - from: ../backend
+    to: app/backend
+    filter:
+      - "**/*"
+      - "!.env"
+      - "!data/**"
+      - "!node_modules/.cache/**"
+      - "!node_modules/**/.cache/**"
+  - from: ../frontend
+    to: app/frontend
+    filter:
+      - "**/*"
+      - "!backups/**"
+      - "!.env.local"
+      - "!node_modules/.cache/**"
+      - "!node_modules/**/.cache/**"
+  - from: ../database
+    to: app/database
+    filter:
+      - "**/*"
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: app_icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  # The custom page in installer.nsh is the single folder choice shown to users.
+  allowToChangeInstallationDirectory: false
+  include: installer.nsh
+publish:
+  provider: github
+  owner: Bas21950
+  repo: E-System-School
