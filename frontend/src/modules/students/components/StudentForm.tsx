@@ -5,15 +5,22 @@ import { Student, CreateStudentInput, ApiResponse, StudentProfileData } from '..
 import { api } from '@/lib/api';
 import { AcademicYear, GradeLevel, Room } from '@/types/master-data';
 import ThaiDatePicker from '@/components/ui/ThaiDatePicker';
-import { readStudentDocument } from '../utils/readStudentDocument';
+import { readStudentDocument, splitPersonName } from '../utils/readStudentDocument';
 import { HiOutlineDocumentArrowUp, HiOutlineCheckCircle, HiOutlineExclamationTriangle } from 'react-icons/hi2';
 
 type ProfileFieldKey = string;
 type ProfileField = { key: ProfileFieldKey; label: string; wide?: boolean; date?: boolean };
+type FormTab = 'student' | 'health' | 'family' | 'school';
+const FORM_TABS: { key: FormTab; label: string }[] = [
+  { key: 'student', label: 'ข้อมูลนักเรียน' },
+  { key: 'health', label: 'ที่อยู่และสุขภาพ' },
+  { key: 'family', label: 'ครอบครัวและผู้ปกครอง' },
+  { key: 'school', label: 'ประวัติการศึกษา' },
+];
 
-const PROFILE_SECTIONS: { title: string; fields: ProfileField[]; columns?: string }[] = [
+const PROFILE_SECTIONS: { title: string; tab: FormTab; fields: ProfileField[]; columns?: string }[] = [
   {
-    title: 'ข้อมูลส่วนบุคคลและสุขภาพ',
+    title: 'สุขภาพและข้อมูลส่วนบุคคล', tab: 'health',
     columns: 'grid-cols-2 xl:grid-cols-4',
     fields: [
       { key: 'nationality', label: 'สัญชาติ' }, { key: 'ethnicity', label: 'เชื้อชาติ' },
@@ -24,7 +31,7 @@ const PROFILE_SECTIONS: { title: string; fields: ProfileField[]; columns?: strin
     ],
   },
   {
-    title: 'ที่อยู่ตามทะเบียนบ้าน',
+    title: 'ที่อยู่ตามทะเบียนบ้าน', tab: 'health',
     columns: 'grid-cols-2 xl:grid-cols-4',
     fields: [
       { key: 'house_registration_no', label: 'รหัสประจำบ้าน' }, { key: 'house_no', label: 'บ้านเลขที่' },
@@ -35,7 +42,7 @@ const PROFILE_SECTIONS: { title: string; fields: ProfileField[]; columns?: strin
     ],
   },
   {
-    title: 'รายละเอียดนักเรียน',
+    title: 'รายละเอียดนักเรียน', tab: 'student',
     columns: 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3',
     fields: [
       { key: 'enrollment_status_label', label: 'สถานะตามเอกสาร' }, { key: 'admission_date', label: 'วันที่เข้าเรียน', date: true },
@@ -45,7 +52,7 @@ const PROFILE_SECTIONS: { title: string; fields: ProfileField[]; columns?: strin
     ],
   },
   {
-    title: 'ประวัติการศึกษาเดิม',
+    title: 'ประวัติการศึกษาเดิม', tab: 'school',
     columns: 'grid-cols-2 xl:grid-cols-4',
     fields: [
       { key: 'previous_grade', label: 'ชั้นเรียนเดิม' }, { key: 'previous_student_id', label: 'รหัสนักเรียนเดิม' },
@@ -56,27 +63,43 @@ const PROFILE_SECTIONS: { title: string; fields: ProfileField[]; columns?: strin
     ],
   },
   {
-    title: 'ข้อมูลครอบครัว',
+    title: 'ข้อมูลครอบครัว', tab: 'family',
     columns: 'grid-cols-2 xl:grid-cols-4',
     fields: [
       { key: 'parents_marital_status', label: 'สถานภาพสมรสของบิดามารดา' },
       { key: 'siblings_count', label: 'จำนวนพี่น้อง' }, { key: 'siblings_studying_count', label: 'พี่น้องที่กำลังศึกษา' },
-      { key: 'father_national_id', label: 'เลขประชาชนบิดา' }, { key: 'father_name', label: 'ชื่อบิดา', wide: true },
-      { key: 'father_nationality', label: 'สัญชาติบิดา' }, { key: 'father_status', label: 'สถานภาพบิดา' },
-      { key: 'father_disability_type', label: 'ความพิการบิดา' }, { key: 'father_occupation', label: 'อาชีพบิดา' },
-      { key: 'father_monthly_income', label: 'รายได้บิดา' },
-      { key: 'mother_national_id', label: 'เลขประชาชนมารดา' }, { key: 'mother_name', label: 'ชื่อมารดา', wide: true },
-      { key: 'mother_nationality', label: 'สัญชาติมารดา' }, { key: 'mother_status', label: 'สถานภาพมารดา' },
-      { key: 'mother_disability_type', label: 'ความพิการมารดา' }, { key: 'mother_occupation', label: 'อาชีพมารดา' },
-      { key: 'mother_monthly_income', label: 'รายได้มารดา' },
-      { key: 'guardian_national_id', label: 'เลขประชาชนผู้ปกครอง' }, { key: 'guardian_name', label: 'ชื่อผู้ปกครอง', wide: true },
+    ],
+  },
+  {
+    title: 'บิดา', tab: 'family', columns: 'grid-cols-2 xl:grid-cols-4',
+    fields: [
+      { key: 'father_prefix', label: 'คำนำหน้า' }, { key: 'father_first_name', label: 'ชื่อ' }, { key: 'father_last_name', label: 'นามสกุล' },
+      { key: 'father_national_id', label: 'เลขประชาชน' }, { key: 'father_nationality', label: 'สัญชาติ' },
+      { key: 'father_status', label: 'สถานภาพ' }, { key: 'father_disability_type', label: 'ความพิการ' },
+      { key: 'father_occupation', label: 'อาชีพ' }, { key: 'father_monthly_income', label: 'รายได้' },
+    ],
+  },
+  {
+    title: 'มารดา', tab: 'family', columns: 'grid-cols-2 xl:grid-cols-4',
+    fields: [
+      { key: 'mother_prefix', label: 'คำนำหน้า' }, { key: 'mother_first_name', label: 'ชื่อ' }, { key: 'mother_last_name', label: 'นามสกุล' },
+      { key: 'mother_national_id', label: 'เลขประชาชน' }, { key: 'mother_nationality', label: 'สัญชาติ' },
+      { key: 'mother_status', label: 'สถานภาพ' }, { key: 'mother_disability_type', label: 'ความพิการ' },
+      { key: 'mother_occupation', label: 'อาชีพ' }, { key: 'mother_monthly_income', label: 'รายได้' },
+    ],
+  },
+  {
+    title: 'ผู้ปกครอง / ผู้ติดต่อหลัก', tab: 'family', columns: 'grid-cols-2 xl:grid-cols-4',
+    fields: [
+      { key: 'guardian_prefix', label: 'คำนำหน้า' }, { key: 'guardian_first_name', label: 'ชื่อ' }, { key: 'guardian_last_name', label: 'นามสกุล' },
+      { key: 'guardian_national_id', label: 'เลขประชาชน' },
       { key: 'guardian_relationship', label: 'ความสัมพันธ์' }, { key: 'guardian_age', label: 'อายุผู้ปกครอง' },
       { key: 'guardian_status', label: 'สถานภาพผู้ปกครอง' }, { key: 'guardian_occupation', label: 'อาชีพผู้ปกครอง' },
       { key: 'guardian_monthly_income', label: 'รายได้ผู้ปกครอง' },
     ],
   },
   {
-    title: 'ข้อมูลภาษาอังกฤษ',
+    title: 'ข้อมูลภาษาอังกฤษ', tab: 'school',
     columns: 'grid-cols-1 md:grid-cols-2',
     fields: [
       { key: 'student_name_en', label: 'ชื่อนักเรียน (Student Name)' },
@@ -90,6 +113,34 @@ interface StudentFormProps {
   initialData?: Student | null;
   onSubmit: (data: CreateStudentInput) => Promise<{ success: boolean; error?: string }>;
   onCancel: () => void;
+}
+
+function withSplitFamilyNames(profile: StudentProfileData, parentName = ''): StudentProfileData {
+  const next = { ...profile };
+  for (const person of ['father', 'mother', 'guardian'] as const) {
+    const fullName = profile[`${person}_name`] || (person === 'guardian' ? parentName : '');
+    if (!fullName) continue;
+    const legacyRelationship = fullName.match(/\s+ความสัมพันธ์\s*[:：]?\s*(.+)$/);
+    if (person === 'guardian' && legacyRelationship && !next.guardian_relationship) next.guardian_relationship = legacyRelationship[1].trim();
+    const split = splitPersonName(fullName.replace(/\s+ความสัมพันธ์\s*[:：]?\s*.+$/, ''));
+    next[`${person}_prefix`] ||= split.prefix;
+    next[`${person}_first_name`] ||= split.first_name;
+    next[`${person}_last_name`] ||= split.last_name;
+  }
+  return next;
+}
+
+function combineFamilyNames(profile: StudentProfileData): StudentProfileData {
+  const next = { ...profile };
+  for (const person of ['father', 'mother', 'guardian'] as const) {
+    const prefix = (next[`${person}_prefix`] || '').trim();
+    const firstName = (next[`${person}_first_name`] || '').trim();
+    const lastName = (next[`${person}_last_name`] || '').trim();
+    if ([`${person}_prefix`, `${person}_first_name`, `${person}_last_name`].some((key) => key in next)) {
+      next[`${person}_name`] = `${prefix}${firstName}${lastName ? ` ${lastName}` : ''}`;
+    }
+  }
+  return next;
 }
 
 export default function StudentForm({ initialData, onSubmit, onCancel }: StudentFormProps) {
@@ -116,6 +167,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
   const [documentError, setDocumentError] = useState('');
   const [documentInfo, setDocumentInfo] = useState<{ name: string; fields: number; pages: number } | null>(null);
   const [documentReviewed, setDocumentReviewed] = useState(false);
+  const [activeTab, setActiveTab] = useState<FormTab>('student');
   
   // Master Data Options
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -172,7 +224,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
         address: initialData.address || '',
         status: initialData.status || 'กำลังศึกษาอยู่',
       });
-      setProfileData(initialData.profile_data || {});
+      setProfileData(withSplitFamilyNames(initialData.profile_data || {}, initialData.parent_name || ''));
     } else {
       setFormData({
         student_id: '', national_id: '', prefix: '', first_name: '', last_name: '', gender: 'ชาย', birthday: '',
@@ -183,6 +235,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
     setDocumentInfo(null);
     setDocumentError('');
     setDocumentReviewed(false);
+    setActiveTab('student');
   }, [initialData]);
 
   const filteredRooms = allRooms.filter(r => r.grade_id === selectedGradeId);
@@ -197,7 +250,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
       if (name === 'prefix') {
         if (value === 'เด็กชาย' || value === 'นาย') {
           updates.gender = 'ชาย';
-        } else if (value === 'เด็กหญิง' || value === 'นางสาว') {
+        } else if (value === 'เด็กหญิง' || value === 'นางสาว' || value === 'นาง') {
           updates.gender = 'หญิง';
         }
       }
@@ -236,7 +289,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
       ) as StudentProfileData;
 
       setFormData((previous) => ({ ...previous, ...importedBaseFields }));
-      setProfileData((previous) => ({ ...previous, ...importedProfile }));
+      setProfileData((previous) => ({ ...previous, ...withSplitFamilyNames(importedProfile, importedBaseFields.parent_name || '') }));
 
       if (result.roomLabel) {
         const roomMatch = result.roomLabel.match(/^\s*([ก-ฮa-z]+)\.?\s*(\d+)\s*[/-]\s*(\d+)/i);
@@ -266,22 +319,26 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
     if (documentInfo && !documentReviewed) {
       setError('กรุณาตรวจสอบข้อมูลที่อ่านจากเอกสาร แล้วทำเครื่องหมายยืนยันก่อนบันทึก');
-      setLoading(false);
       return;
     }
 
     if (!formData.student_id || !formData.first_name || !formData.last_name || (!initialData && (!formData.room_id || !formData.academic_year_id))) {
       setError('กรุณากรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน (รหัส, ชื่อ, ระดับชั้น/ห้อง และปีการศึกษาสำหรับนักเรียนใหม่)');
-      setLoading(false);
+      setActiveTab('student');
       return;
     }
 
-    const { success, error: submitError } = await onSubmit({ ...formData, profile_data: profileData });
+    setLoading(true);
+    const normalizedProfile = combineFamilyNames(profileData);
+    const { success, error: submitError } = await onSubmit({
+      ...formData,
+      parent_name: normalizedProfile.guardian_name ?? formData.parent_name,
+      profile_data: normalizedProfile,
+    });
     
     if (!success) {
       setError(submitError || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -290,7 +347,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="student-form-compact space-y-3">
       {error && (
         <div className="p-4 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
           {error}
@@ -298,11 +355,11 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
       )}
 
       <section className="overflow-hidden rounded-sm border border-sky-200 bg-white">
-        <div className="flex items-center gap-2 border-b border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-900">
+        <div className="flex items-center gap-2 border-b border-sky-200 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-900">
           <HiOutlineDocumentArrowUp size={18} />
           อ่านข้อมูลจากเอกสารนักเรียน (PDF)
         </div>
-        <div className="space-y-3 p-4">
+        <div className="space-y-2 p-3">
           <p className="text-sm text-gray-600">
             เลือก PDF ของนักเรียน ระบบจะอ่านข้อมูลและเติมลงในช่องด้านล่างโดยอัตโนมัติ ข้อมูลจะยังไม่ถูกบันทึกจนกว่าจะตรวจทานและกดยืนยัน
           </p>
@@ -325,21 +382,29 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
                 <HiOutlineCheckCircle className="mt-0.5 shrink-0" size={18} />
                 <span>อ่าน “{documentInfo.name}” แล้ว พบข้อมูล {documentInfo.fields} ช่อง จาก {documentInfo.pages} หน้า กรุณาไล่ตรวจข้อมูลทุกหมวดด้านล่าง</span>
               </div>
-              <label className="flex cursor-pointer items-start gap-2 border-t border-emerald-200 pt-3 text-sm font-semibold text-gray-800">
-                <input type="checkbox" checked={documentReviewed} onChange={(event) => setDocumentReviewed(event.target.checked)} className="mt-1 h-4 w-4 accent-emerald-700" />
-                <span>ตรวจทานข้อมูลที่อ่านจากเอกสารแล้ว และยืนยันว่าถูกต้องก่อนบันทึก</span>
-              </label>
+              <p className="text-xs text-emerald-900">ตรวจทานทุกหมวด แล้วติ๊กยืนยันที่แถบด้านล่างก่อนบันทึก</p>
             </div>
           )}
         </div>
       </section>
 
+      <nav className="sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-sky-200 bg-white py-2 sm:grid-cols-4" aria-label="หมวดข้อมูลนักเรียน">
+        {FORM_TABS.map((tab) => (
+          <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+            aria-current={activeTab === tab.key ? 'step' : undefined}
+            className={`rounded px-2 py-1.5 text-xs font-semibold sm:text-sm ${activeTab === tab.key ? 'bg-sky-700 text-white' : 'bg-slate-50 text-slate-700 hover:bg-sky-50'}`}>
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
       {/* Primary Info */}
+      {activeTab === 'student' && <div className="space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-primary-600 uppercase tracking-wider mb-4 border-b pb-2">
+        <h3 className="mb-2 border-b pb-1 text-sm font-semibold text-sky-800">
           ข้อมูลพื้นฐาน
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">รหัสนักเรียน *</label>
             <input
@@ -373,11 +438,11 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
               <option value="เด็กชาย">เด็กชาย</option>
               <option value="เด็กหญิง">เด็กหญิง</option>
               <option value="นาย">นาย</option>
+              <option value="นาง">นาง</option>
               <option value="นางสาว">นางสาว</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อ *</label>
               <input
                 type="text"
@@ -387,8 +452,8 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
                 className="input-field"
                 required
               />
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">นามสกุล *</label>
               <input
                 type="text"
@@ -398,7 +463,6 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
                 className="input-field"
                 required
               />
-            </div>
           </div>
 
           <div>
@@ -408,7 +472,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
               <option value="หญิง">หญิง</option>
             </select>
           </div>
-          <div>
+          <div className="xl:col-span-2">
             <ThaiDatePicker
               label="วันเกิด"
               value={formData.birthday}
@@ -421,10 +485,10 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
 
       {/* Enrollment Info (Step 4 & 6) */}
       <div>
-        <h3 className="text-sm font-semibold text-primary-600 uppercase tracking-wider mb-4 border-b pb-2">
+        <h3 className="mb-2 border-b pb-1 text-sm font-semibold text-sky-800">
           {initialData ? 'การจัดห้องเรียนปัจจุบัน' : 'ข้อมูลการลงทะเบียนแรกเข้า'}
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ระดับชั้น *</label>
             <select value={selectedGradeId} onChange={handleGradeChange} className="select-field" required>
@@ -463,23 +527,14 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
           </div>
         </div>
       </div>
+      </div>}
 
       {/* Parent Info */}
-      <div>
-        <h3 className="text-sm font-semibold text-primary-600 uppercase tracking-wider mb-4 border-b pb-2">
-          ข้อมูลผู้ปกครองและที่อยู่
+      {activeTab === 'family' && <div>
+        <h3 className="mb-2 border-b pb-1 text-sm font-semibold text-sky-800">
+          ช่องทางติดต่อผู้ปกครอง
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ปกครอง</label>
-            <input
-              type="text"
-              name="parent_name"
-              value={formData.parent_name}
-              onChange={handleChange}
-              className="input-field"
-            />
-          </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label>
             <input
@@ -490,23 +545,21 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
               className="input-field"
             />
           </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">ที่อยู่</label>
-            <textarea
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="input-field min-h-[80px] resize-none"
-              rows={3}
-            />
-          </div>
         </div>
-      </div>
+      </div>}
 
-      {PROFILE_SECTIONS.map((section) => (
+      {activeTab === 'health' && <section className="border border-gray-200 bg-white">
+        <h3 className="border-b border-sky-200 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-900">ที่อยู่สำหรับติดต่อปัจจุบัน</h3>
+        <div className="p-3">
+          <label className="block text-xs font-semibold text-gray-600 mb-1">ที่อยู่</label>
+          <textarea name="address" value={formData.address} onChange={handleChange} className="input-field min-h-[56px] resize-y" rows={2} />
+        </div>
+      </section>}
+
+      {PROFILE_SECTIONS.filter(section => section.tab === activeTab).map((section) => (
         <section key={section.title} className="border border-gray-200 bg-white">
-          <h3 className="border-b border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-900">{section.title}</h3>
-          <div className={`grid grid-cols-1 gap-x-4 gap-y-3 p-4 sm:grid-cols-2 ${section.columns || ''}`}>
+          <h3 className="border-b border-sky-200 bg-sky-50 px-3 py-2 text-sm font-bold text-sky-900">{section.title}</h3>
+          <div className={`grid grid-cols-1 gap-x-3 gap-y-2 p-3 sm:grid-cols-2 ${section.columns || ''}`}>
             {section.fields.map((field) => (
               <label key={field.key} className={`block min-w-0 ${field.wide ? 'md:col-span-2' : ''}`}>
                 <span className="mb-1 block text-xs font-semibold text-gray-600">{field.label}</span>
@@ -514,7 +567,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
                   <textarea
                     value={profileData[field.key] || ''}
                     onChange={(event) => handleProfileChange(field.key, event.target.value)}
-                    className="input-field min-h-[68px] resize-y"
+                    className="input-field min-h-[56px] resize-y"
                     rows={2}
                   />
                 ) : (
@@ -531,7 +584,13 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
         </section>
       ))}
 
-      <div className="flex gap-4 justify-end pt-6 border-t border-gray-100">
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 border-t border-gray-200 bg-white py-2">
+        {documentInfo && (
+          <label className="mr-auto flex cursor-pointer items-center gap-2 text-xs font-semibold text-gray-800 sm:text-sm">
+            <input type="checkbox" checked={documentReviewed} onChange={(event) => setDocumentReviewed(event.target.checked)} className="h-4 w-4 shrink-0 accent-emerald-700" />
+            <span>ตรวจข้อมูลจาก PDF ครบแล้ว</span>
+          </label>
+        )}
         <button type="button" onClick={onCancel} className="btn-secondary px-8" disabled={loading}>
           ยกเลิก
         </button>

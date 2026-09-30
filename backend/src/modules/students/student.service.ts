@@ -245,9 +245,12 @@ const STUDENT_PROFILE_FIELDS: (keyof StudentProfileData)[] = [
   'previous_school_name', 'previous_total_credits', 'previous_gpa', 'qualification_status',
   'qualification_response_date', 'previous_graduation_date', 'parents_marital_status', 'siblings_count',
   'siblings_studying_count', 'father_national_id', 'father_name', 'father_nationality', 'father_status',
+  'father_prefix', 'father_first_name', 'father_last_name',
   'father_disability_type', 'father_occupation', 'father_monthly_income', 'mother_national_id', 'mother_name',
+  'mother_prefix', 'mother_first_name', 'mother_last_name',
   'mother_nationality', 'mother_status', 'mother_disability_type', 'mother_occupation', 'mother_monthly_income',
   'guardian_national_id', 'guardian_name', 'guardian_relationship', 'guardian_age', 'guardian_status',
+  'guardian_prefix', 'guardian_first_name', 'guardian_last_name',
   'guardian_occupation', 'guardian_monthly_income', 'student_name_en', 'parent_name_en', 'home_address_en',
 ];
 

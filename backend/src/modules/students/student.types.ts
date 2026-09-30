@@ -98,6 +98,9 @@ export interface StudentProfileData {
   siblings_studying_count?: string;
   father_national_id?: string;
   father_name?: string;
+  father_prefix?: string;
+  father_first_name?: string;
+  father_last_name?: string;
   father_nationality?: string;
   father_status?: string;
   father_disability_type?: string;
@@ -105,6 +108,9 @@ export interface StudentProfileData {
   father_monthly_income?: string;
   mother_national_id?: string;
   mother_name?: string;
+  mother_prefix?: string;
+  mother_first_name?: string;
+  mother_last_name?: string;
   mother_nationality?: string;
   mother_status?: string;
   mother_disability_type?: string;
@@ -112,6 +118,9 @@ export interface StudentProfileData {
   mother_monthly_income?: string;
   guardian_national_id?: string;
   guardian_name?: string;
+  guardian_prefix?: string;
+  guardian_first_name?: string;
+  guardian_last_name?: string;
   guardian_relationship?: string;
   guardian_age?: string;
   guardian_status?: string;

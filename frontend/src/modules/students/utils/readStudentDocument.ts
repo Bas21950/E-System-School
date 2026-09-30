@@ -82,7 +82,7 @@ const labels: { key: FieldKey; aliases: string[] }[] = [
   { key: 'home_address_en', aliases: ['ที่อยู่นักเรียน (Home Address)', 'Home Address'] },
 ];
 
-function normalizePdfText(value: string): string {
+export function normalizePdfText(value: string): string {
   return value
     .normalize('NFKC')
     .replace(/\uF702/g, 'ี')
@@ -90,7 +90,12 @@ function normalizePdfText(value: string): string {
     .replace(/\uF70A/g, '่')
     .replace(/\uF70B/g, '้')
     .replace(/\uF70C/g, '๊')
-    .replace(/\uF70E/g, '้')
+    .replace(/\uF70E/g, '์')
+    // TH Sarabun PDFs can place Sara Am's Nikhahit before a tone mark.
+    // Match ordinary Thai input by keeping the tone mark before Nikhahit.
+    .replace(/\u0E4D([\u0E48-\u0E4B])\u0E32/g, '$1\u0E4D\u0E32')
+    .replace(/([\u0E48-\u0E4B])\u0E4D\u0E32/g, '$1\u0E33')
+    .replace(/\u0E4D\u0E32/g, '\u0E33')
     .replace(/[\u200B-\u200D\uFEFF]/g, '');
 }
 
@@ -106,7 +111,7 @@ function aliasPattern(alias: string): string {
   }).join('');
 }
 
-function buildVisualLines(items: TextItem[]): string[] {
+export function buildVisualLines(items: TextItem[]): string[] {
   const positioned = items
     .filter((item) => typeof item.str === 'string' && item.str.trim() && item.transform)
     .map((item) => ({
@@ -135,18 +140,19 @@ function buildVisualLines(items: TextItem[]): string[] {
         line += part.text;
         previousRight = Math.max(previousRight, part.x + part.width);
       }
-      return line;
+      return normalizePdfText(line);
     });
 }
 
-function collectFieldValues(lines: string[]): Map<FieldKey, string[]> {
+export function collectFieldValues(lines: string[]): Map<FieldKey, string[]> {
   const aliasEntries = labels
     .flatMap(({ key, aliases }) => aliases.map((alias) => ({ key, alias, pattern: aliasPattern(alias) })))
     .sort((a, b) => b.alias.length - a.alias.length);
   const allPattern = aliasEntries.map((entry) => `(?<field${aliasEntries.indexOf(entry)}>${entry.pattern})`).join('|');
   const results = new Map<FieldKey, string[]>();
 
-  for (const line of lines) {
+  for (const rawLine of lines) {
+    const line = normalizePdfText(rawLine);
     const matches: { key: FieldKey; start: number; end: number }[] = [];
     const expression = new RegExp(allPattern, 'giu');
     Array.from(line.matchAll(expression)).forEach((match) => {
@@ -191,15 +197,12 @@ function normalizeThaiDate(value: string): string {
   return `${year}-${month}-${String(day).padStart(2, '0')}`;
 }
 
-function splitStudentName(value: string): Pick<CreateStudentInput, 'prefix' | 'first_name' | 'last_name'> {
+export function splitPersonName(value: string): { prefix: string; first_name: string; last_name: string } {
   const name = cleanValue(value).replace(/\s+/g, ' ');
-  const match = name.match(/^(ด\.?\s*ช\.?|ด\.?\s*ญ\.?|เด็กชาย|เด็กหญิง|นาย|นางสาว|นาง)\s*(.*)$/i);
-  const prefixLabel = match?.[1]?.replace(/\s/g, '').replace(/\./g, '').toLowerCase();
-  const prefix = prefixLabel === 'ดช' || prefixLabel === 'เด็กชาย' ? 'เด็กชาย'
-    : prefixLabel === 'ดญ' || prefixLabel === 'เด็กหญิง' ? 'เด็กหญิง'
-      : prefixLabel === 'นาย' ? 'นาย'
-        : prefixLabel === 'นางสาว' ? 'นางสาว'
-          : prefixLabel === 'นาง' ? 'นางสาว' : '';
+  const match = name.match(/^(ด\.?\s*ช\.?|ด\.?\s*ญ\.?|น\.?\s*ส\.?|เด็กชาย|เด็กหญิง|นางสาว|นาย|นาง)\s*(.*)$/i);
+  const compact = match?.[1]?.replace(/[.\s]/g, '').toLowerCase();
+  const prefix = compact === 'ดช' ? 'เด็กชาย' : compact === 'ดญ' ? 'เด็กหญิง'
+    : compact === 'นส' ? 'นางสาว' : match?.[1] || '';
   const parts = (match?.[2] || name).trim().split(/\s+/).filter(Boolean);
   return { prefix, first_name: parts.shift() || '', last_name: parts.join(' ') };
 }
@@ -327,7 +330,13 @@ export async function readStudentDocument(file: File): Promise<{
     home_address_en: value('home_address_en'),
   };
 
-  const fullName = splitStudentName(value('full_name'));
+  const fullName = splitPersonName(value('full_name'));
+  for (const person of ['father', 'mother', 'guardian'] as const) {
+    const name = splitPersonName(profile[`${person}_name`] || '');
+    profile[`${person}_prefix`] = name.prefix;
+    profile[`${person}_first_name`] = name.first_name;
+    profile[`${person}_last_name`] = name.last_name;
+  }
   const data: Partial<CreateStudentInput> = {
     ...fullName,
     student_id: value('student_id').replace(/\s/g, ''),
